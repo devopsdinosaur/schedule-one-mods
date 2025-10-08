@@ -6,7 +6,7 @@
     <FolderName>Schedule I</FolderName>
     <AssemblyName>$(Author).$(GameName).$(MSBuildProjectName)</AssemblyName>
     <RootNamespace>$(MSBuildProjectName)</RootNamespace>
-    <TargetFramework>net480</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <Platforms>AnyCPU</Platforms>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <LangVersion>latest</LangVersion>

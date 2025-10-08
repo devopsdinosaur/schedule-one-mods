@@ -1,6 +1,8 @@
 ﻿using HarmonyLib;
 using Il2CppScheduleOne.Equipping;
 using Il2CppScheduleOne.GameTime;
+using Il2CppScheduleOne.Law;
+using Il2CppScheduleOne.Money;
 using Il2CppScheduleOne.ObjectScripts;
 using Il2CppScheduleOne.ObjectScripts.WateringCan;
 using Il2CppScheduleOne.PlayerScripts;
@@ -71,6 +73,22 @@ public class TestingPlugin : DDPlugin {
 			} catch (Exception e) {
 				_error_log("** HarmonyPatch_Equippable_WateringCan_CanPour.Prefix ERROR - " + e);
 			}
+			return true;
+		}
+	}
+
+	[HarmonyPatch(typeof(ATM), "Enter")]
+	class HarmonyPatch_ATM_Enter {
+		private static bool Prefix() {
+			ATM.WeeklyDepositSum = 0;
+			return true;
+		}
+	}
+
+	[HarmonyPatch(typeof(ATM), "Exit")]
+	class HarmonyPatch_ATM_Exit {
+		private static bool Prefix() {
+			ATM.WeeklyDepositSum = 0;
 			return true;
 		}
 	}

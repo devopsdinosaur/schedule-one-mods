@@ -1,4 +1,7 @@
 ﻿using HarmonyLib;
+using Il2CppScheduleOne;
+using Il2CppScheduleOne.DevUtilities;
+using Il2CppScheduleOne.Equipping;
 using Il2CppScheduleOne.ObjectScripts;
 using Il2CppScheduleOne.PlayerScripts;
 using Il2CppScheduleOne.Trash;
@@ -95,5 +98,20 @@ public class AutocleanPlugin : DDPlugin {
 			}
 		}
 		nearby_items.ForEach(item => item.Interacted());
+	}
+
+	[HarmonyPatch(typeof(Equippable_TrashGrabber), "Update")]
+	class HarmonyPatch_Equippable_TrashGrabber_Update {
+		private static bool Prefix(Equippable_TrashGrabber __instance) {
+			try {
+				if (GameInput.GetButton(GameInput.ButtonCode.PrimaryClick)) {
+					ReflectionUtils.invoke_method(__instance, "set_timeSinceLastDrop", new object[] { __instance.timeSinceLastDrop + Time.deltaTime * 1.75f });
+				}
+				return true;
+			} catch (Exception e) {
+				_error_log("** HarmonyPatch_Equippable_TrashGrabber_Update.Prefix ERROR - " + e);
+			}
+			return true;
+		}
 	}
 }
