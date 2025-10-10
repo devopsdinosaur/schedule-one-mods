@@ -1,5 +1,6 @@
 ﻿using HarmonyLib;
 using Il2CppScheduleOne.GameTime;
+using Il2CppScheduleOne.UI;
 using MelonLoader;
 using System;
 using System.Reflection;
@@ -47,8 +48,10 @@ public class TimeManagementPlugin : DDPlugin {
 	private static float m_time_scale = 0.5f;
 	private static bool m_time_is_paused = true;
 	private static bool m_checked_for_time_text = false;
+	private static bool m_found_UpdateMinimapTime = false;
+	private static Transform m_minimap_time_transform = null;
 
-    public override void OnInitializeMelon() {
+	public override void OnInitializeMelon() {
 		try {
 			logger = LoggerInstance;
 			this.m_plugin_info = PluginInfo.to_dict();
@@ -59,16 +62,15 @@ public class TimeManagementPlugin : DDPlugin {
 	}
 
 	private static void update_minimap_time_postfix(Text ___minimapTimeText) {
-		___minimapTimeText.text += (m_time_is_paused ? " [Paused]" : $" [{m_time_scale:0.00}]");
+		try {
+			___minimapTimeText.text += (m_time_is_paused ? " [Paused]" : $" [{m_time_scale:0.00}]");
+		} catch {}
 	}
 
 	public override void OnUpdate() {
-		
-
 		if (!m_checked_for_time_text) {
 			m_checked_for_time_text = true;
 			MethodInfo postfix = this.GetType().GetMethod("update_minimap_time_postfix", ReflectionUtils.BINDING_FLAGS_ALL);
-			bool found_UpdateMinimapTime = false;
 			foreach (MelonAssembly assembly in MelonAssembly.LoadedAssemblies) {
 				if (assembly.Assembly.GetName().Name != "BetterMiniMap") {
 					continue;
@@ -77,27 +79,57 @@ public class TimeManagementPlugin : DDPlugin {
 					if (type.FullName != "BetterMiniMap.MiniMapHandler") {
 						continue;
 					}
-					found_UpdateMinimapTime = (m_harmony.Patch(type.GetMethod("UpdateMinimapTime", ReflectionUtils.BINDING_FLAGS_ALL), null, new HarmonyLib.HarmonyMethod(postfix)) != null);
+					m_found_UpdateMinimapTime = (m_harmony.Patch(type.GetMethod("UpdateMinimapTime", ReflectionUtils.BINDING_FLAGS_ALL), null, new HarmonyLib.HarmonyMethod(postfix)) != null);
 					break;
 				}
 				break;
 			}
-			if (found_UpdateMinimapTime) {
+			if (m_found_UpdateMinimapTime) {
 				_info_log("Found BetterMiniMap's time text; will add time scale/pause status.");
 			} else {
 				_warn_log("Unable to locate BetterMiniMap mod or its time text; time scale/pause status will only be printed to Melon console.  Install BetterMiniMap from NexusMods to get UI updates from this mod.");
 			}
 		}
+		string text = null;
 		if (Input.GetKeyDown(KeyCode.RightBracket)) {
-			_info_log($"Time Scale INCREASED to {(m_time_scale += m_time_delta):0.00}.");
+			text = $"Time Scale INCREASED to {(m_time_scale += m_time_delta):0.00}.";
 		} else if (Input.GetKeyDown(KeyCode.LeftBracket)) {
-			_info_log($"Time Scale DECREASED to {(m_time_scale = (m_time_scale - m_time_delta < 0f ? 0f : m_time_scale - m_time_delta)):0.00}.");
+			text = $"Time Scale DECREASED to {(m_time_scale = (m_time_scale - m_time_delta < 0f ? 0f : m_time_scale - m_time_delta)):0.00}.";
 		} else if (Input.GetKeyDown(KeyCode.Backslash)) {
-			_info_log($"Time progression is {((m_time_is_paused = !m_time_is_paused) ? "PAUSED" : "ACTIVE")}.");
+			text = $"Time progression is {((m_time_is_paused = !m_time_is_paused) ? "PAUSED" : "ACTIVE")}.";
+		}
+		if (text != null) {
+			HintDisplay.Instance.ShowHint_10s(text);
+			_info_log(text);
 		}
 	}
 
-    [HarmonyPatch(typeof(TimeManager), "Update")]
+	[HarmonyPatch(typeof(HintDisplay), "ShowHint", new Type[] { typeof(string), typeof(float) })]
+	class HarmonyPatch_HintDisplay_ShowHint {
+		private static void Postfix(HintDisplay __instance) {
+			try {
+				__instance.Container.transform.position += Vector3.down * 100f;
+				//if (m_minimap_time_transform == null) {
+				//	foreach (Text text in Resources.FindObjectsOfTypeAll<Text>()) {
+				//		if (text.gameObject.name == "MinimapTime") {
+				//			m_minimap_time_transform = text.transform;
+				//			break;
+				//		}
+				//	}
+				//}
+				//if (m_minimap_time_transform == null) {
+				//	return;
+				//}
+				//Rect rect = m_minimap_time_transform.GetComponent<RectTransform>().rect;
+				//__instance.Container.SetParent(m_minimap_time_transform.parent, false);
+				//__instance.Container.position = //new Vector2(Screen.width + __instance.Label.renderedWidth - __instance.Padding.x, m_minimap_time_transform.position.y - rect.height - 5f);
+			} catch {
+				m_minimap_time_transform = null;
+			}
+		}
+	}
+
+	[HarmonyPatch(typeof(TimeManager), "Update")]
 	class HarmonyPatch_TimeManager_Update {
 		private static bool Prefix(TimeManager __instance) {
 			try {
